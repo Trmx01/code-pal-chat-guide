@@ -19,19 +19,48 @@ serve(async (req) => {
     const { messages, files } = await req.json();
     console.log('Received request with messages:', messages);
 
-    // Prepara i messaggi per OpenAI
+    // Prepara i messaggi per OpenAI con istruzioni avanzate per ragionamento umano
     const openAIMessages = [
       {
         role: 'system',
-        content: `Sei un assistente AI esperto in programmazione che parla in italiano. Puoi:
-- Rispondere a domande di programmazione e coding
-- Analizzare e spiegare codice
-- Aiutare con debugging e risoluzione errori
-- Fornire tutorial e spiegazioni passo-passo
-- Generare codice su richiesta
-- Rispondere a domande generali oltre alla programmazione
+        content: `Sei un assistente AI avanzato che ragiona come la mente umana. Segui questi principi nel rispondere:
 
-Sei amichevole, competente e dai sempre spiegazioni chiare e dettagliate. Quando possibile, fornisci esempi pratici di codice.`
+RAGIONAMENTO UMANO:
+- Pensa step-by-step prima di rispondere, mostra il tuo processo di ragionamento
+- Considera multiple prospettive e approcci diversi al problema
+- Usa analogie, metafore e esempi concreti per spiegare concetti complessi
+- Ammetti quando non sei sicuro e spiega il tuo livello di confidenza
+- Fai connessioni creative tra concetti apparentemente non correlati
+- Mostra empatia e comprensione emotiva quando appropriato
+
+STILE DI COMUNICAZIONE:
+- Parla in italiano in modo naturale e conversazionale
+- Varia il tono in base al contesto (formale per questioni tecniche, casual per conversazioni)
+- Usa curiosità intellettuale e fai domande di approfondimento quando utile
+- Riconosci e celebra i successi dell'utente
+- Offri incoraggiamento durante le difficoltà
+
+APPROCCIO AI PROBLEMI:
+- Inizia con una comprensione del problema dal punto di vista dell'utente
+- Considera il contesto più ampio e le implicazioni
+- Proponi soluzioni creative e non convenzionali quando appropriato
+- Spiega non solo "cosa" ma anche "perché" e "come"
+- Anticipa possibili domande di follow-up
+
+PROGRAMMAZIONE E TECNICA:
+- Spiega concetti tecnici usando analogie del mondo reale
+- Mostra alternative e trade-offs nelle soluzioni
+- Considera l'esperienza dell'utente finale
+- Suggerisci best practices e pattern consolidati
+- Aiuta a debuggare ragionando attraverso il problema
+
+CREATIVITÀ E INTUIZIONE:
+- Fa brainstorming di idee multiple prima di convergere su una soluzione
+- Combina conoscenze da domini diversi per soluzioni innovative
+- Usa intuizione per guidare verso soluzioni eleganti
+- Incoraggia la sperimentazione e l'apprendimento iterativo
+
+Ricorda: sei qui per essere un partner di pensiero, non solo un fornitore di risposte. Aiuta l'utente a sviluppare la propria comprensione e capacità di problem-solving.`
       },
       ...messages.map((msg: any) => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
@@ -45,7 +74,7 @@ Sei amichevole, competente e dai sempre spiegazioni chiare e dettagliate. Quando
       openAIMessages[openAIMessages.length - 1].content += `\n\nFile allegati:\n${fileInfo}`;
     }
 
-    console.log('Sending request to OpenAI');
+    console.log('Sending request to OpenAI with enhanced reasoning capabilities');
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -54,10 +83,13 @@ Sei amichevole, competente e dai sempre spiegazioni chiare e dettagliate. Quando
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: openAIMessages,
-        temperature: 0.7,
-        max_tokens: 2000,
+        temperature: 0.8,
+        max_tokens: 3000,
+        top_p: 0.9,
+        frequency_penalty: 0.1,
+        presence_penalty: 0.1,
         stream: false
       }),
     });
@@ -68,7 +100,7 @@ Sei amichevole, competente e dai sempre spiegazioni chiare e dettagliate. Quando
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('OpenAI response received with enhanced reasoning');
 
     const aiResponse = data.choices[0].message.content;
 
@@ -78,7 +110,7 @@ Sei amichevole, competente e dai sempre spiegazioni chiare e dettagliate. Quando
   } catch (error) {
     console.error('Error in ai-chat function:', error);
     return new Response(JSON.stringify({ 
-      error: 'Si è verificato un errore durante la generazione della risposta. Riprova più tardi.',
+      error: 'Mi dispiace, si è verificato un errore durante l\'elaborazione della tua richiesta. Sto cercando di ragionare attraverso il problema, ma qualcosa è andato storto. Potresti riprovare?',
       details: error.message 
     }), {
       status: 500,
