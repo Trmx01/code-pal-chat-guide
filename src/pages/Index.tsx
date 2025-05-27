@@ -1,10 +1,10 @@
-
 import { useState, useRef } from 'react';
 import { Send, Paperclip, Image, FileText, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useAIChat } from '@/hooks/useAIChat';
 
 interface Message {
   id: string;
@@ -19,17 +19,17 @@ const Index = () => {
     {
       id: '1',
       type: 'ai',
-      content: 'Ciao! 👋 Sono il tuo assistente AI per la programmazione. Posso aiutarti a scrivere codice, risolvere errori e imparare passo dopo passo. Puoi inviarmi anche file e immagini!',
+      content: 'Ciao! 👋 Sono il tuo assistente AI per la programmazione. Posso aiutarti a scrivere codice, risolvere errori, spiegare concetti e molto altro! Puoi inviarmi anche file e immagini per analizzarli insieme. Come posso aiutarti oggi?',
       timestamp: new Date()
     }
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-  const [isTyping, setIsTyping] = useState(false);
+  const { sendMessageToAI, isLoading } = useAIChat();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim() && selectedFiles.length === 0) return;
 
     const newMessage: Message = {
@@ -40,38 +40,35 @@ const Index = () => {
       timestamp: new Date()
     };
 
-    setMessages(prev => [...prev, newMessage]);
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
     setInputMessage('');
     setSelectedFiles([]);
 
-    // Simulate AI response
-    setIsTyping(true);
-    setTimeout(() => {
+    try {
+      console.log('Sending message to AI...');
+      const aiResponseContent = await sendMessageToAI(updatedMessages, selectedFiles);
+      
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: getAIResponse(inputMessage, selectedFiles),
+        content: aiResponseContent,
         timestamp: new Date()
       };
+      
       setMessages(prev => [...prev, aiResponse]);
-      setIsTyping(false);
-    }, 1000 + Math.random() * 2000);
-  };
-
-  const getAIResponse = (message: string, files: File[]) => {
-    if (files.length > 0) {
-      return `Ho ricevuto ${files.length} file! 📁 Analizziamo insieme il codice. Dalle informazioni che vedo, posso aiutarti a migliorare la struttura, trovare errori o spiegare come funziona. Cosa vorresti sapere nello specifico?`;
+      console.log('AI response added to messages');
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      // Aggiungi un messaggio di errore se qualcosa va storto
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        content: 'Mi dispiace, si è verificato un errore. Potresti riprovare?',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
     }
-    
-    if (message.toLowerCase().includes('errore') || message.toLowerCase().includes('error')) {
-      return `Vedo che hai un problema con un errore! 🔍 Per aiutarti meglio, puoi condividere il codice che ti dà problemi? Posso analizzare il messaggio d'errore e spiegarti passo dopo passo come risolverlo.`;
-    }
-    
-    if (message.toLowerCase().includes('imparare') || message.toLowerCase().includes('tutorial')) {
-      return `Perfetto! Adoro insegnare programmazione! 📚 Su cosa vorresti concentrarti? Posso spiegarti concetti base, best practices, o aiutarti con linguaggi specifici come JavaScript, Python, React e molto altro. Dimmi il tuo livello attuale!`;
-    }
-    
-    return `Ottima domanda! 💡 Sono qui per aiutarti con qualsiasi cosa riguardi la programmazione. Posso spiegarti concetti, revisionare il tuo codice, aiutarti a risolvere bug, o guidarti nell'apprendimento di nuove tecnologie. Come posso assisterti al meglio?`;
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,7 +152,7 @@ const Index = () => {
             </div>
           ))}
           
-          {isTyping && (
+          {isLoading && (
             <div className="flex justify-start">
               <div className="max-w-[80%] order-1">
                 <Card className="p-4 bg-white shadow-sm mr-4">
@@ -165,7 +162,7 @@ const Index = () => {
                       <div className="w-2 h-2 bg-purple-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
                       <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                     </div>
-                    <span className="text-sm text-gray-500">L'AI sta scrivendo...</span>
+                    <span className="text-sm text-gray-500">L'AI sta pensando...</span>
                   </div>
                 </Card>
               </div>
@@ -235,12 +232,13 @@ const Index = () => {
                     handleSendMessage();
                   }
                 }}
+                disabled={isLoading}
               />
               <Button
                 onClick={handleSendMessage}
                 size="icon"
                 className="absolute right-2 top-2 h-6 w-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
-                disabled={!inputMessage.trim() && selectedFiles.length === 0}
+                disabled={(!inputMessage.trim() && selectedFiles.length === 0) || isLoading}
               >
                 <Send className="w-3 h-3" />
               </Button>
